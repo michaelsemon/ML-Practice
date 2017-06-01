@@ -11,6 +11,12 @@ train <- subset(df,sample == TRUE)
 # 30% test data
 test <- subset(df,sample == FALSE)
 
-#Run Model
+# Train/build model
+model <- lm(G3 ~ ., data=  train)
 
+#Run Model
+#model <- lm(y ~ x1)
+
+# Interpret Model
+print(summary(model))
 
