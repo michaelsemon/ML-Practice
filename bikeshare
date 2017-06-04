@@ -40,3 +40,17 @@ pl4 <- pl4 + scale_color_gradientn(colors=c('dark blue','blue','light blue','lig
 # print(pl4)
 
 
+# ---- Building LR Model ----
+
+
+temp.model <- lm(count~temp,df)
+print(summary(temp.model))
+
+# number of bikes at 25 degrees
+temp.test <- data.frame(temp=c(25))
+print(predict(temp.model,temp.test))
+
+df$hour <- sapply(df$hour,as.numeric)
+
+final.model <- lm(count ~ . -casual - registered - datetime - atemp, df)
+print(summary(final.model))
