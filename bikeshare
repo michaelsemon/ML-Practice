@@ -1,0 +1,42 @@
+library(ggplot2)
+library(caTools)
+library(ggthemes)
+library(dplyr)
+
+# ---- Exploring the data ----
+
+df <- read.csv('bikeshare.csv',sep= ',')
+#print(head(df))
+
+graph <- ggplot(df,aes(temp,count)) + geom_point(alpha=0.2, aes(color=temp))
+#print(graph)
+
+df$datetime <- as.POSIXct(df$datetime)
+
+plot2 <- ggplot(df,aes(datetime,count)) + geom_point(alpha=0.5,aes(color=temp)) + scale_color_continuous(low='#55D8CE',high='#FF6E2E')
+# print(plot2)
+
+corr.temp.count <- cor(df[,c('temp','count')])
+# print(corr.temp.count)
+
+bp <- ggplot(df,aes(factor(season),count)) + geom_boxplot(aes(color=factor(season))) + theme_bw()
+# print(bp)
+
+#create hour column
+hour.col <- function(x) {
+  format(x,"%H")
+}
+df$hour <- sapply(df$datetime,hour.col)
+# print(head(df))
+
+#working days
+pl3 <- ggplot(filter(df,workingday==1),aes(hour,count)) + geom_point(position=position_jitter(w=1,h=0),aes(color=temp),alpha=0.5)
+pl3 <- pl3 + scale_color_gradientn(colors=c('dark blue','blue','light blue','light green','yellow','orange','red')) + theme_bw()
+# print(pl3)
+
+#non working days
+pl4 <- ggplot(filter(df,workingday==0),aes(hour,count)) + geom_point(position=position_jitter(w=1,h=0),aes(color=temp),alpha=0.5)
+pl4 <- pl4 + scale_color_gradientn(colors=c('dark blue','blue','light blue','light green','yellow','orange','red')) + theme_bw()
+# print(pl4)
+
+
