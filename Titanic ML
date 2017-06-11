@@ -5,7 +5,7 @@ library(ggplot2)
 library(ggthemes)
 
 df.train <- read.csv('titanic_train.csv')
-missmap(df.train,main='Missing Map',col=c('yellow','black'),legend=FALSE)
+#missmap(df.train,main='Missing Map',col=c('yellow','black'),legend=FALSE)
 
 #discovery
 ggplot(df.train,aes(Survived)) + geom_bar()
@@ -13,11 +13,11 @@ ggplot(df.train,aes(Pclass)) + geom_bar((aes(fill=factor(Pclass))))
 ggplot(df.train,aes(Age)) + geom_histogram(bins=20,alpha=0.5)
 ggplot(df.train,aes(SibSp)) + geom_bar()
 ggplot(df.train,aes(Fare)) + geom_histogram(fill='green', color='black')
-
+  #---   Age vs Class
 pl <- ggplot(df.train,aes(Pclass,Age))
 pl <- pl + geom_boxplot(aes(group=Pclass,fill=factor(Pclass),alpha=0.4))
 pl <- pl + scale_y_continuous(breaks= seq(min(0),max(80),by=2)) + theme_bw()
-print(pl)
+#print(pl)
 
 # imputation of age based on class 
 impute_age <- function(age,class) {
@@ -40,15 +40,26 @@ impute_age <- function(age,class) {
 }
 
 fixed.ages <- impute_age(df.train$Age,df.train$Pclass)
+df.train$Age <- fixed.ages
+#print(missmap(df.train,main = 'Imputation Check', col = c('yellow','black'),legend=FALSE))
+
+#feature engineering
+df.train <- select(df.train,-PassengerId,-Name,-Ticket,-Cabin)
+df.train$Survived <- factor(df.train$Survived)
+df.train$Pclass <- factor(df.train$Pclass)
+df.train$Parch <- factor(df.train$Parch)
+df.train$SibSp <- factor(df.train$SibSp)
+
+#logistic model 
+log.model <- glm(Survived ~ . , family=binomial(link='logit'),data=df.train)
+summary(log.model)
 
 
+fitted.probabilities <- predict(final.log.model,final.test,type='response')
+fitted.results <- ifelse(fitted.probabilities>0.5,1,0)
+misClassError <- mean(fitted.results != final.test$Survived)
+print(1 - missClassError)
 
-
-
-
-
-
-
-
-
+#confusion matrix
+table(final.test$Survived,fitted.probabilities>0.5)
 
