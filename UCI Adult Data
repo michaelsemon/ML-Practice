@@ -1,0 +1,125 @@
+library(Amelia)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(ggthemes)
+
+adult <- read.csv('adult_sal.csv')
+
+# ------  clean up the data --------
+
+adult <- select(adult,-X) # remove index values
+# combine categories 
+unemp <- function(job) {
+  job <- as.character(job)
+  if (job == 'Without-pay' | job == 'Never-worked') {
+    return('Unemployed')
+  } else {
+    return(job)
+  }
+}
+adult$type_employer <- sapply(adult$type_employer,unemp) # apply unemp combine fn
+
+# Combine State/Local gov jobs & Self Employed jobs
+group_emp <- function(job){
+  if (job=='Local-gov' | job=='State-gov'){
+    return('SL-gov')
+  }else if (job=='Self-emp-inc' | job=='Self-emp-not-inc'){
+    return('self-emp')
+  }else{
+    return(job)
+  }
+}
+adult$type_employer <- sapply(adult$type_employer,group_emp)
+
+#Reduce Marital Column  -- Married, Not-Married, Never-Married
+marital.status <- function(status) {
+  if (status == 'Divorced' | status == 'Separated' | status == 'Widowed') {
+    return('Not-Married')
+  } else if (status == 'Never-married') {
+    return('Never-married')
+  } else {
+    return('Married')
+  }
+}
+adult$marital <- sapply(adult$marital, marital.status)
+
+# Country column clean up
+Asia <- c('China','Hong','India','Iran','Cambodia','Japan', 'Laos' ,
+          'Philippines' ,'Vietnam' ,'Taiwan', 'Thailand')
+North.America <- c('Canada','United-States','Puerto-Rico' )
+Europe <- c('England' ,'France', 'Germany' ,'Greece','Holand-Netherlands','Hungary',
+            'Ireland','Italy','Poland','Portugal','Scotland','Yugoslavia')
+Latin.and.South.America <- c('Columbia','Cuba','Dominican-Republic','Ecuador',
+                             'El-Salvador','Guatemala','Haiti','Honduras',
+                             'Mexico','Nicaragua','Outlying-US(Guam-USVI-etc)','Peru',
+                             'Jamaica','Trinadad&Tobago')
+Other <- c('South')
+
+country_group <- function(country) {
+  if (country %in% Asia) {
+    return('Asia')
+  }
+  else if (country %in% North.America) {
+    return('North America')
+  } else if (country %in% Europe) {
+    return('Europe')
+  } else if (country %in% Latin.and.South.America) {
+    return('Latin.and.South.America')
+  } else {
+    return('Other')
+  }
+}
+adult$country <- sapply(adult$country, country_group)
+
+#Factor columns 
+adult$type_employer <- sapply(adult$type_employer,factor)
+adult$country <- sapply(adult$country,factor)
+adult$marital <- sapply(adult$marital,factor)
+
+adult[adult == '?'] <- NA
+#print(table(adult$type_employer)) # test ^
+
+#missmap(adult,'white','red') #?
+#missmap(adult,y.at = c(1),y.labels = c(''),col=c('yellow','black'))
+adult <- na.omit(adult) # omits NA values from df
+#str(adult)
+#missmap(adult,y.at = c(1),y.labels = c(''),col=c('yellow','black')) # check 
+
+# ------  data visualization --------
+
+#histogram of ages, colored by income
+hist.adult <- ggplot(adult,aes(age)) + geom_histogram(aes(fill=income),color='black',binwidth=1) + theme_bw()
+#histogram of hours worked per week
+hist.adult.2 <- ggplot(adult,aes(hr_per_week)) + geom_histogram() + theme_bw()
+
+adult <- rename(adult, region = country) # use dyplr to change column name
+
+#create barplot of region with the fill color=income class
+pl.bar <- ggplot(adult,aes(region)) + geom_bar(aes(fill=income),color='black')
+pl.bar1 <- pl.bar + theme_bw() + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+# ------  build the logistic regression model --------
+library(caTools)
+set.seed(101)
+sample <- sample.split(adult$income, SplitRatio = 0.7) #sampling data 
+train <- subset(adult, sample == TRUE) #training data
+test <- subset(adult, sample == FALSE) #testing data 
+
+model <- glm(income ~ . , data=adult, family = binomial(logit))
+#summary(model)
+
+step.model <- step(model)
+summary(step.model)
+
+test$predicted.income <- predict(model, newdata=test, type='response')
+test.matrix <- table(test$income, test$predicted.income > 0.5)
+print(test.matrix)
+
+(6389 + 1405)/(6389+531+890+1405) #accuracy
+(6389)/(6389/548) # recall
+6389/(6389+890) # precision
+
+
+
+
