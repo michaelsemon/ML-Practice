@@ -1,0 +1,59 @@
+library(ISLR)
+library(ggplot2)
+library(caTools)
+library(rpart)
+library(rpart.plot)
+library(randomForest)
+df <- College
+
+### Exploritory Data ###
+
+# Scatter Plot: Grade Rate vs Room&Board with Private (yes/no)
+gradrate.roomboard <- ggplot(data=df,aes(Room.Board,Grad.Rate)) + geom_point(aes(color=Private))
+ #print(gradrate.roomboard)
+
+#Histogram: Full time undergrad by Private
+fulltime <- ggplot(data=df,aes(F.Undergrad)) + geom_histogram(aes(fill=Private),color='black',bins=50)
+ #print(fulltime)
+
+#Histogram: Grade rate by Private
+gradrate <- ggplot(data=df,aes(Grad.Rate)) + geom_histogram(aes(fill=Private),color='black',bins=50)
+ #print(gradrate)
+
+#What college had Grad rate over 100%?
+#print(subset(df,Grad.Rate > 100))
+df['Cazenovia College','Grade.Rate'] <- 100
+
+# Train test split
+set.seed(101)
+sample <- sample.split(df$Private,SplitRatio = 0.7)
+train <- subset(df, sample == T)
+test <- subset(df, sample == F)
+
+### Decision Tree ###
+
+tree <- rpart(Private ~ ., method = 'class', data=train)
+tree.predict <- predict(tree,test)
+tree.predict <- as.data.frame(tree.predict)
+join <- function(x){
+  if (x>0.5) {
+    return('Yes')
+  } else{
+    return('No')
+  }
+}
+tree.predict$Private <- sapply(tree.predict$Yes,join)
+head(tree.predict)
+
+# Confusion Matrix of results
+print(table(tree.predict$Private,test$Private))
+
+#Plot tree model
+prp(tree)
+
+### Random Forest ###
+forest.model <- randomForest(Private ~ . , data = train,importance = TRUE)
+rf.model$confusion
+rf.model$importance
+forest.model.predict <- predict(forest.model,test)
+table(forest.model.predict,test$Private) #Final Results
